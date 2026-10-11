@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { droidexUserDataDir } from './droidexPaths.js';
 import type { SessionRole, TranscriptEvent } from './protocol.js';
@@ -44,6 +44,12 @@ export function parseStoredNotice(
   const text = stringValue(line.text);
   const ts = dateMs(stringValue(line.timestamp));
   if (!id || text === undefined || !Number.isFinite(ts)) return undefined;
+  if (
+    line.type === 'status' &&
+    text ===
+      'Session runtime released after 30 minutes idle to free memory. Sending a message restores it.'
+  )
+    return undefined;
   const modelSwitch = objectValue(line.modelSwitch);
   const from = stringValue(modelSwitch?.from);
   const to = stringValue(modelSwitch?.to);
@@ -91,10 +97,6 @@ export function appendSessionNotice(providerSessionId: string, event: Transcript
   if (!line) return;
   mkdirSync(join(droidexUserDataDir(), 'session-notices'), { recursive: true });
   appendFileSync(noticesPath(providerSessionId), `${JSON.stringify(line)}\n`);
-}
-
-export function removeSessionNotices(providerSessionId: string): void {
-  rmSync(noticesPath(providerSessionId), { force: true });
 }
 
 export function sessionNoticesRevision(providerSessionId: string): string {
